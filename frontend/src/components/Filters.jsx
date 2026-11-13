@@ -1,17 +1,16 @@
 import { CATEGORIES } from '../utils/constants.js'
 
-// A "controlled" filter bar: it owns no state. The parent passes the current
-// filters and an onChange callback, so the parent can compute the filtered list.
+// Holds no state. The parent owns the filters and filters the list.
 function Filters({ filters, onChange }) {
   function update(field, value) {
-    onChange({ ...filters, [field]: value }) // copy the object, change one field
+    onChange({ ...filters, [field]: value })
   }
 
   return (
     <section className="filters">
       <input
         type="search"
-        placeholder="Search by title..."
+        placeholder="Search" aria-label="Search by title"
         value={filters.search}
         onChange={(e) => update('search', e.target.value)}
       />
@@ -23,9 +22,7 @@ function Filters({ filters, onChange }) {
       <select value={filters.category} onChange={(e) => update('category', e.target.value)}>
         <option value="all">All categories</option>
         {CATEGORIES.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
+          <option key={c}>{c}</option>
         ))}
       </select>
       <input type="month" value={filters.month} onChange={(e) => update('month', e.target.value)} />

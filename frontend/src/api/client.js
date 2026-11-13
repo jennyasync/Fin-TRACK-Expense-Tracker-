@@ -10,8 +10,7 @@ export function setToken(token) {
   else localStorage.removeItem(TOKEN_KEY)
 }
 
-// One place that talks to the backend. Adds the JSON headers and the auth token,
-// and turns failed responses into thrown Errors with the server's message.
+// Every API call goes through here: adds the token, and throws the server's error message.
 async function request(path, { method = 'GET', body } = {}) {
   const headers = { 'Content-Type': 'application/json' }
   const token = getToken()

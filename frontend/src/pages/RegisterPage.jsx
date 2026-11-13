@@ -48,7 +48,7 @@ function RegisterPage() {
         </div>
         {error && <p className="form-error">{error}</p>}
         <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
-          {submitting ? 'Creating...' : 'Register'}
+          {submitting ? 'Creating…' : 'Register'}
         </button>
         <p className="auth-switch">
           Already have an account? <Link to="/login">Log in</Link>

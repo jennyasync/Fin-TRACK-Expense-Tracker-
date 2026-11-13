@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { formatCurrency } from '../utils/format.js'
 
-// Horizontal bars showing where expense money went, by category.
 function CategoryChart({ expenses }) {
   const rows = useMemo(() => {
     const totals = {}
@@ -15,7 +14,6 @@ function CategoryChart({ expenses }) {
   }, [expenses])
 
   if (rows.length === 0) return null
-
   const max = rows[0].total
 
   return (

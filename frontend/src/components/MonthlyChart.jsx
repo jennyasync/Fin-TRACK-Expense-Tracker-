@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { formatCurrency, formatMonth, monthKey } from '../utils/format.js'
 
-// Income vs expenses for the last 6 months that have data. Plain CSS bars, no chart library.
+// Last 6 months that have data. Bars are plain divs with a % height, no chart library.
 function MonthlyChart({ expenses }) {
   const months = useMemo(() => {
     const totals = {}

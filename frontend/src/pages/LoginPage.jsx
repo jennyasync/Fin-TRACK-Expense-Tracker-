@@ -10,7 +10,6 @@ function LoginPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  // Already logged in? Skip the login page.
   if (user) return <Navigate to="/" replace />
 
   async function handleSubmit(event) {
@@ -44,7 +43,7 @@ function LoginPage() {
         </div>
         {error && <p className="form-error">{error}</p>}
         <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
-          {submitting ? 'Logging in...' : 'Log in'}
+          {submitting ? 'Logging in…' : 'Log in'}
         </button>
         <p className="auth-switch">
           No account? <Link to="/register">Register</Link>

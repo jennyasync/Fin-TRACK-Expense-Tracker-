@@ -5,7 +5,7 @@ function Navbar() {
 
   return (
     <header className="navbar">
-      <h1>Expense Tracker</h1>
+      <h1>FinTrack</h1>
       <div className="navbar-right">
         <span className="navbar-user">{user.name}</span>
         <button className="btn btn-secondary" onClick={logout}>

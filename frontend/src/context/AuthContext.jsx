@@ -5,10 +5,9 @@ const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  // true while we check whether a saved token is still valid on first load
+  // True while we check a saved token on first load
   const [loading, setLoading] = useState(Boolean(getToken()))
 
-  // On page load: if a token exists, ask the backend who it belongs to.
   useEffect(() => {
     if (!getToken()) return
     api
@@ -30,8 +29,7 @@ export function AuthProvider({ children }) {
     setUser(data.user)
   }
 
-  // useCallback keeps the same function identity between renders, so components that
-  // list `logout` in a useEffect dependency array don't re-run the effect needlessly.
+  // Stable identity, because DashboardPage lists logout in a useEffect dependency array.
   const logout = useCallback(() => {
     setToken(null)
     setUser(null)
@@ -44,7 +42,6 @@ export function AuthProvider({ children }) {
   )
 }
 
-// Custom hook so components can write `const { user } = useAuth()`
 export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>')
