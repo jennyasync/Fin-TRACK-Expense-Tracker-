@@ -2,46 +2,43 @@ import { useState } from 'react'
 import { CATEGORIES } from '../utils/constants.js'
 import { todayISO } from '../utils/format.js'
 
-// Used for both adding and editing.
-// Props:
-//   initial  - an existing expense when editing, or null when adding
-//   onSubmit - async function(expenseData) provided by the parent
-//   onCancel - closes the form
+// Used for both adding (initial = null) and editing (initial = an expense).
 function ExpenseForm({ initial, onSubmit, onCancel }) {
-  // Controlled inputs: React state is the single source of truth for each field.
-  const [title, setTitle] = useState(initial?.title ?? '')
-  const [amount, setAmount] = useState(initial ? String(initial.amount) : '')
-  const [type, setType] = useState(initial?.type ?? 'expense')
-  const [category, setCategory] = useState(initial?.category ?? CATEGORIES[0])
-  const [date, setDate] = useState(initial?.date ?? todayISO())
+  const [form, setForm] = useState({
+    title: initial?.title ?? '',
+    amount: initial ? String(initial.amount) : '',
+    type: initial?.type ?? 'expense',
+    category: initial?.category ?? CATEGORIES[0],
+    date: initial?.date ?? todayISO(),
+  })
   const [errors, setErrors] = useState({})
   const [submitError, setSubmitError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  function validate() {
-    const next = {}
-    if (!title.trim()) next.title = 'Title is required'
-    const num = Number(amount)
-    if (!amount || !Number.isFinite(num) || num <= 0) next.amount = 'Enter an amount greater than 0'
-    if (!date) next.date = 'Date is required'
-    return next
-  }
+  const bind = (field) => ({
+    id: field,
+    value: form[field],
+    onChange: (e) => setForm({ ...form, [field]: e.target.value }),
+  })
 
   async function handleSubmit(event) {
-    event.preventDefault() // stop the browser's default full-page form submit
-    const found = validate()
+    event.preventDefault()
+    const found = {}
+    if (!form.title.trim()) found.title = 'Title is required'
+    if (!(Number(form.amount) > 0)) found.amount = 'Enter an amount greater than 0'
+    if (!form.date) found.date = 'Date is required'
     setErrors(found)
-    if (Object.keys(found).length > 0) return
+    if (Object.keys(found).length) return
 
     setSubmitting(true)
     setSubmitError('')
     try {
-      await onSubmit({ title: title.trim(), amount: Number(amount), type, category, date })
+      // On success the parent closes the form.
+      await onSubmit({ ...form, title: form.title.trim(), amount: Number(form.amount) })
     } catch (err) {
       setSubmitError(err.message)
       setSubmitting(false)
     }
-    // On success the parent closes the form, so there is nothing else to reset.
   }
 
   return (
@@ -50,27 +47,19 @@ function ExpenseForm({ initial, onSubmit, onCancel }) {
 
       <div className="field">
         <label htmlFor="title">Title</label>
-        <input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Groceries" />
+        <input {...bind('title')} placeholder="Groceries" />
         {errors.title && <p className="field-error">{errors.title}</p>}
       </div>
 
       <div className="form-row">
         <div className="field">
           <label htmlFor="amount">Amount (₹)</label>
-          <input
-            id="amount"
-            type="number"
-            min="0"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
+          <input {...bind('amount')} type="number" min="0" step="0.01" />
           {errors.amount && <p className="field-error">{errors.amount}</p>}
         </div>
-
         <div className="field">
           <label htmlFor="type">Type</label>
-          <select id="type" value={type} onChange={(e) => setType(e.target.value)}>
+          <select {...bind('type')}>
             <option value="expense">Expense</option>
             <option value="income">Income</option>
           </select>
@@ -80,18 +69,15 @@ function ExpenseForm({ initial, onSubmit, onCancel }) {
       <div className="form-row">
         <div className="field">
           <label htmlFor="category">Category</label>
-          <select id="category" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <select {...bind('category')}>
             {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
+              <option key={c}>{c}</option>
             ))}
           </select>
         </div>
-
         <div className="field">
           <label htmlFor="date">Date</label>
-          <input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <input {...bind('date')} type="date" />
           {errors.date && <p className="field-error">{errors.date}</p>}
         </div>
       </div>
@@ -103,7 +89,7 @@ function ExpenseForm({ initial, onSubmit, onCancel }) {
           Cancel
         </button>
         <button type="submit" className="btn btn-primary" disabled={submitting}>
-          {submitting ? 'Saving...' : initial ? 'Save changes' : 'Add'}
+          {submitting ? 'Saving…' : initial ? 'Save changes' : 'Add'}
         </button>
       </div>
     </form>

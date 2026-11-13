@@ -1,6 +1,5 @@
 import { formatCurrency, formatDate } from '../utils/format.js'
 
-// Props: expense (object), onEdit and onDelete (callbacks from the parent)
 function ExpenseItem({ expense, onEdit, onDelete }) {
   const isIncome = expense.type === 'income'
 
@@ -13,8 +12,8 @@ function ExpenseItem({ expense, onEdit, onDelete }) {
         </p>
       </div>
       <div className="expense-right">
-        <p className={isIncome ? 'positive' : 'negative'}>
-          {isIncome ? '+' : '-'}
+        <p className={`amount ${isIncome ? 'positive' : 'negative'}`}>
+          {isIncome ? '+' : '−'}
           {formatCurrency(expense.amount)}
         </p>
         <div className="expense-actions">

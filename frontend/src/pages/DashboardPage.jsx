@@ -12,69 +12,49 @@ import { monthKey } from '../utils/format.js'
 
 const DEFAULT_FILTERS = { search: '', type: 'all', category: 'all', month: '', sort: 'date-desc' }
 
-// The "smart" component: it owns the data and state, and passes pieces down as props.
+const SORTS = {
+  'date-desc': (a, b) => b.date.localeCompare(a.date) || b.id - a.id,
+  'date-asc': (a, b) => a.date.localeCompare(b.date) || a.id - b.id,
+  'amount-desc': (a, b) => b.amount - a.amount,
+  'amount-asc': (a, b) => a.amount - b.amount,
+}
+
+// Owns the expenses and filters. Child components only get props.
 function DashboardPage() {
   const { logout } = useAuth()
   const [expenses, setExpenses] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
-  // formState: null = form hidden, { expense: null } = adding, { expense: {...} } = editing
+  // null = form hidden, { expense: null } = adding, { expense } = editing
   const [formState, setFormState] = useState(null)
 
-  // Runs once after the first render: fetch this user's expenses.
   useEffect(() => {
     api
       .getExpenses()
       .then((data) => setExpenses(data.expenses))
-      .catch((err) => {
-        if (err.status === 401) logout() // token expired -> back to login
-        else setLoadError(err.message)
-      })
+      .catch((err) => (err.status === 401 ? logout() : setLoadError(err.message)))
       .finally(() => setLoading(false))
   }, [logout])
 
-  // Derived data: computed from `expenses` + `filters`, never stored in its own state.
-  const visibleExpenses = useMemo(() => {
+  const visible = useMemo(() => {
     const search = filters.search.trim().toLowerCase()
-    const list = expenses.filter((e) => {
-      if (search && !e.title.toLowerCase().includes(search)) return false
-      if (filters.type !== 'all' && e.type !== filters.type) return false
-      if (filters.category !== 'all' && e.category !== filters.category) return false
-      if (filters.month && monthKey(e.date) !== filters.month) return false
-      return true
-    })
-
-    // sort() mutates, but `list` is already a fresh array from filter(), so this is safe.
-    list.sort((a, b) => {
-      switch (filters.sort) {
-        case 'date-asc':
-          return a.date.localeCompare(b.date) || a.id - b.id
-        case 'amount-desc':
-          return b.amount - a.amount
-        case 'amount-asc':
-          return a.amount - b.amount
-        default:
-          return b.date.localeCompare(a.date) || b.id - a.id
-      }
-    })
-    return list
+    return expenses
+      .filter(
+        (e) =>
+          e.title.toLowerCase().includes(search) &&
+          (filters.type === 'all' || e.type === filters.type) &&
+          (filters.category === 'all' || e.category === filters.category) &&
+          (!filters.month || monthKey(e.date) === filters.month),
+      )
+      .sort(SORTS[filters.sort])
   }, [expenses, filters])
 
-  const totals = useMemo(() => {
-    let income = 0
-    let spent = 0
-    for (const e of visibleExpenses) {
-      if (e.type === 'income') income += e.amount
-      else spent += e.amount
-    }
-    return { income, spent }
-  }, [visibleExpenses])
+  const sum = (type) => visible.filter((e) => e.type === type).reduce((total, e) => total + e.amount, 0)
 
   async function handleSave(data) {
     if (formState.expense) {
       const { expense } = await api.updateExpense(formState.expense.id, data)
-      // Immutable update: build a NEW array, replacing only the edited item.
       setExpenses((prev) => prev.map((e) => (e.id === expense.id ? expense : e)))
     } else {
       const { expense } = await api.createExpense(data)
@@ -93,13 +73,13 @@ function DashboardPage() {
     }
   }
 
-  const hasActiveFilters = JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS)
+  const hasFilters = JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS)
 
   return (
     <>
       <Navbar />
       <main className="container">
-        {loading && <p className="center-message">Loading your transactions...</p>}
+        {loading && <p className="center-message">Loading transactions…</p>}
 
         {loadError && (
           <div className="error-box">
@@ -112,20 +92,20 @@ function DashboardPage() {
 
         {!loading && !loadError && (
           <>
-            <SummaryCards income={totals.income} expenses={totals.spent} />
+            <SummaryCards income={sum('income')} expenses={sum('expense')} />
 
             <div className="toolbar">
               <h2>Transactions</h2>
               {!formState && (
                 <button className="btn btn-primary" onClick={() => setFormState({ expense: null })}>
-                  + Add transaction
+                  Add transaction
                 </button>
               )}
             </div>
 
             {formState && (
               <ExpenseForm
-                // key forces a fresh form (fresh state) when switching between add / edit targets
+                // A new key gives a fresh form when switching between add and edit.
                 key={formState.expense?.id ?? 'new'}
                 initial={formState.expense}
                 onSubmit={handleSave}
@@ -134,14 +114,14 @@ function DashboardPage() {
             )}
 
             <Filters filters={filters} onChange={setFilters} />
-            {hasActiveFilters && (
+            {hasFilters && (
               <button className="btn-link" onClick={() => setFilters(DEFAULT_FILTERS)}>
                 Clear filters
               </button>
             )}
 
             <ExpenseList
-              expenses={visibleExpenses}
+              expenses={visible}
               totalCount={expenses.length}
               onEdit={(expense) => setFormState({ expense })}
               onDelete={handleDelete}
@@ -149,7 +129,7 @@ function DashboardPage() {
 
             <div className="charts">
               <MonthlyChart expenses={expenses} />
-              <CategoryChart expenses={visibleExpenses} />
+              <CategoryChart expenses={visible} />
             </div>
           </>
         )}
