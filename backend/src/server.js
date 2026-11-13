@@ -9,20 +9,16 @@ if (!process.env.JWT_SECRET || !process.env.DATABASE_URL) {
 }
 
 const app = express()
-
-// CORS: lets the browser app on another origin (localhost:5173) call this server.
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }))
-// Parses JSON request bodies into req.body.
 app.use(express.json())
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }))
 app.use('/api/auth', authRoutes)
 app.use('/api/expenses', expenseRoutes)
 
-// Unknown routes
 app.use((req, res) => res.status(404).json({ error: 'Not found' }))
 
-// Central error handler: any next(err) from a route ends up here.
+// Express 5 sends errors thrown in async routes here, so routes don't need try/catch.
 app.use((err, req, res, next) => {
   console.error(err)
   res.status(500).json({ error: 'Something went wrong on the server' })
