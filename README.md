@@ -1,40 +1,124 @@
-# FinTrack: Expense Tracker (React + Express + PostgreSQL)
+<div align="center">
 
-A full-stack expense manager. Users register, log in, and manage their own income and expenses with search, filters, sorting, totals and charts.
+# FinTrack
 
-## Architecture
+**Know where your money goes.**
+A full-stack expense tracker built with React, Express and PostgreSQL.
 
+[Features](#features) · [How it works](#how-it-works) · [API](#api) · [Run it locally](#run-it-locally)
+
+<br />
+
+<img src="docs/dashboard.png" alt="FinTrack dashboard with income, expenses, balance and a list of transactions" width="900" />
+
+</div>
+
+<br />
+
+## Features
+
+| | |
+|---|---|
+| **Accounts** | Register and log in. Passwords are hashed with bcrypt, and sessions use a JWT |
+| **Transactions** | Add, edit and delete income and expenses, with a category and a date |
+| **Find anything** | Search by title, filter by type, category or month, and sort by date or amount |
+| **Totals** | Income, expenses and balance update as you filter |
+| **Charts** | Income vs expenses for the last 6 months, and spending by category, drawn with plain CSS (no chart library) |
+| **Private by design** | Every query is scoped to the logged-in user, so nobody can see or change anyone else's data |
+
+<img src="docs/charts.png" alt="Income vs expenses bar chart and spending by category" width="100%" />
+
+## How it works
+
+```mermaid
+flowchart LR
+    A["React app<br/>(Vite)"] -- "fetch + JWT" --> B["Express 5 API"]
+    B -- "SQL ($1, $2 placeholders)" --> C[("PostgreSQL")]
 ```
-Browser (React + Vite)  --HTTP/JSON-->  Express API  --SQL-->  PostgreSQL
-  pages, state, UI                      auth, validation        users, expenses
+
+The browser never talks to the database. Every request goes through the API, which checks the token first.
+
+### Adding an expense
+
+```mermaid
+sequenceDiagram
+    participant UI as React (ExpenseForm)
+    participant MW as requireAuth
+    participant R as routes/expenses.js
+    participant DB as PostgreSQL
+
+    UI->>MW: POST /api/expenses  with Bearer token
+    MW->>MW: verify JWT, set req.userId
+    MW->>R: next()
+    R->>R: validate title, amount, type, category, date
+    R->>DB: INSERT ... RETURNING
+    DB-->>R: new row
+    R-->>UI: 201 { expense }
+    Note over UI: added to the top of the list, no reload
 ```
 
-- The **frontend** never talks to the database. It calls the API with `fetch`.
-- The **backend** checks the JWT on every expense request and always filters by `user_id`, so users only see their own data.
-- The **database** is the permanent store.
+### Data model
 
-## Setup
+```mermaid
+erDiagram
+    USERS ||--o{ EXPENSES : owns
+    USERS {
+        int id PK
+        text name
+        text email UK
+        text password_hash
+    }
+    EXPENSES {
+        int id PK
+        int user_id FK
+        text title
+        numeric amount "CHECK > 0"
+        text type "income or expense"
+        text category
+        date date
+    }
+```
 
-You need Node 20+ and PostgreSQL installed.
+Deleting a user deletes their expenses (`ON DELETE CASCADE`), and an index on `(user_id, date)` keeps the main query fast.
 
-### 1. Database
+## API
+
+All `/api/expenses` routes need `Authorization: Bearer <token>`.
+
+| Method | Route | What it does |
+|---|---|---|
+| `POST` | `/api/auth/register` | Create an account, returns `{ token, user }` |
+| `POST` | `/api/auth/login` | Log in, returns `{ token, user }` |
+| `GET` | `/api/auth/me` | The current user (used to restore a session) |
+| `GET` | `/api/expenses` | All of your expenses, newest first |
+| `POST` | `/api/expenses` | Add one |
+| `PUT` | `/api/expenses/:id` | Update one of yours |
+| `DELETE` | `/api/expenses/:id` | Delete one of yours |
+| `GET` | `/api/health` | `{ "status": "ok" }` |
+
+## Tech
+
+| Frontend | Backend | Database |
+|---|---|---|
+| React 18, React Router | Node, Express 5 | PostgreSQL |
+| Vite | jsonwebtoken, bcryptjs | `pg` connection pool |
+
+## Run it locally
+
+You need **Node 20+** and **PostgreSQL**.
+
 ```bash
 createdb expense_tracker
 ```
 
-### 2. Backend
 ```bash
 cd backend
 npm install
-cp .env.example .env      # then edit DATABASE_URL and JWT_SECRET
+cp .env.example .env      # set DATABASE_URL and JWT_SECRET
 npm run db:init           # creates the tables from schema.sql
-npm run dev               # API on http://localhost:4000
+npm run dev               # http://localhost:4000
 ```
-If `npm run db:init` fails because `$DATABASE_URL` is not set in your shell, run `psql "<your connection string>" -f schema.sql` directly.
 
-Check it works: open http://localhost:4000/api/health. You should see `{"status":"ok"}`.
-
-### 3. Frontend (in a second terminal)
 ```bash
 cd frontend
 npm install
@@ -42,33 +126,29 @@ cp .env.example .env
 npm run dev               # http://localhost:5173
 ```
 
-Register an account, then add a few transactions.
+If `npm run db:init` can't find `$DATABASE_URL`, run `psql "<your connection string>" -f schema.sql` instead.
 
-## Folder guide
+<details>
+<summary><b>Where things live</b></summary>
+<br />
 
-### backend/
 | File | What it does |
 |---|---|
-| `schema.sql` | Defines the `users` and `expenses` tables. `expenses.user_id` links each row to its owner. |
-| `src/server.js` | Creates the Express 5 app, adds CORS and JSON parsing, mounts the routes, and has the central error handler. Express 5 sends errors from async routes there automatically. |
-| `src/db.js` | A PostgreSQL connection pool shared by all routes. |
-| `src/middleware/auth.js` | Reads the `Authorization: Bearer <token>` header, verifies the JWT, and sets `req.userId`. |
-| `src/routes/auth.js` | `register`, `login`, `me`. Passwords are hashed with bcrypt, and the token is a JWT valid for 7 days. |
-| `src/routes/expenses.js` | CRUD for expenses. Validates input, uses parameterized queries (`$1`, `$2`) against SQL injection, and scopes every query by `user_id`. |
+| `backend/schema.sql` | The `users` and `expenses` tables |
+| `backend/src/server.js` | Express app, CORS, JSON parsing, routes, and the central error handler |
+| `backend/src/db.js` | Shared PostgreSQL connection pool |
+| `backend/src/middleware/auth.js` | Verifies the JWT and sets `req.userId` |
+| `backend/src/routes/auth.js` | Register, login, me |
+| `backend/src/routes/expenses.js` | CRUD for expenses, validation, user scoping |
+| `frontend/src/api/client.js` | One `request()` helper for every API call |
+| `frontend/src/context/AuthContext.jsx` | The user, login, register, logout, and session restore |
+| `frontend/src/pages/DashboardPage.jsx` | Loads expenses, then filters, sorts and totals them |
+| `frontend/src/components/` | Form, list, filters, summary cards and the two charts |
 
-### frontend/src/
-| File | What it does |
-|---|---|
-| `main.jsx` | Entry point. Wraps the app in `BrowserRouter` and `AuthProvider`. |
-| `App.jsx` | Defines the routes. `/` is wrapped in `ProtectedRoute`. |
-| `api/client.js` | One `request()` helper that adds headers and the token, and throws readable errors. All API calls live here. |
-| `context/AuthContext.jsx` | Holds `user`, `login`, `register`, `logout`. Restores the session on page load using the saved token. |
-| `components/ProtectedRoute.jsx` | Redirects logged-out users to `/login`. |
-| `pages/DashboardPage.jsx` | The main "smart" component. Owns the expenses and filter state, fetches data, and computes the filtered, sorted list and totals. |
-| `components/ExpenseForm.jsx` | Controlled form used for both add and edit, with validation. |
-| `components/Filters.jsx` | Search, type, category, month and sort controls. |
-| `components/ExpenseList.jsx` / `ExpenseItem.jsx` | Render the list, including both empty states. |
-| `components/SummaryCards.jsx` | Income, expenses and balance. |
-| `components/MonthlyChart.jsx` / `CategoryChart.jsx` | Charts built with plain CSS, no chart library. |
-| `utils/` | Formatting helpers and the category list. |
+</details>
 
+<br />
+
+<div align="center">
+<sub>Built by <a href="https://github.com/jennyasync">jennyasync</a></sub>
+</div>
