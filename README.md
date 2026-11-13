@@ -1,4 +1,4 @@
-# Expense Tracker (React + Express + PostgreSQL)
+# FinTrack: Expense Tracker (React + Express + PostgreSQL)
 
 A full-stack expense manager. Users register, log in, and manage their own income and expenses with search, filters, sorting, totals and charts.
 
@@ -50,7 +50,7 @@ Register an account, then add a few transactions.
 | File | What it does |
 |---|---|
 | `schema.sql` | Defines the `users` and `expenses` tables. `expenses.user_id` links each row to its owner. |
-| `src/server.js` | Creates the Express app, adds CORS and JSON parsing, mounts the routes, and has the central error handler. |
+| `src/server.js` | Creates the Express 5 app, adds CORS and JSON parsing, mounts the routes, and has the central error handler. Express 5 sends errors from async routes there automatically. |
 | `src/db.js` | A PostgreSQL connection pool shared by all routes. |
 | `src/middleware/auth.js` | Reads the `Authorization: Bearer <token>` header, verifies the JWT, and sets `req.userId`. |
 | `src/routes/auth.js` | `register`, `login`, `me`. Passwords are hashed with bcrypt, and the token is a JWT valid for 7 days. |
