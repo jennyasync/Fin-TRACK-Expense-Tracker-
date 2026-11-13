@@ -1,14 +1,14 @@
 const currencyFormatter = new Intl.NumberFormat('en-IN', {
   style: 'currency',
   currency: 'INR',
-  maximumFractionDigits: 2,
+  minimumFractionDigits: 2,
 })
 
 export function formatCurrency(amount) {
   return currencyFormatter.format(amount)
 }
 
-// "2026-10-03" -> "03 Oct 2026". We build the Date from parts to avoid timezone shifts.
+// "2026-10-03" -> "03 Oct 2026". Built from parts so the timezone can't shift the day.
 export function formatDate(isoDate) {
   const [year, month, day] = isoDate.split('-').map(Number)
   return new Date(year, month - 1, day).toLocaleDateString('en-IN', {
